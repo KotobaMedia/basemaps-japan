@@ -278,7 +278,7 @@ class RoadsTest extends LayerTest {
     assertFeatures(12,
       List.of(Map.of("kind", "rail",
         "kind_detail", "a",
-        "_minzoom", 11
+        "_minzoom", 7
       )),
       processWithRelationAndCoords("",
         0, 0, 1, 1,
@@ -380,7 +380,7 @@ class RoadsTest extends LayerTest {
   void testRouteFerry() {
     assertFeatures(12,
       List.of(Map.of("kind", "ferry",
-        "_minzoom", 11
+        "_minzoom", 10
       )),
       processWithRelationAndCoords("",
         0, 0, 1, 1,

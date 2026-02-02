@@ -17,47 +17,47 @@ public class OsmNames {
   private OsmNames() {}
 
   private static final String[] ALLOWED_LANGS = new String[]{
-    "ar", // Arabic
-    "cs", // Czech
-    "bg", // Bulgarian
-    "da", // Danish
-    "de", // German
-    "el", // Greek
+    // "ar", // Arabic
+    // "cs", // Czech
+    // "bg", // Bulgarian
+    // "da", // Danish
+    // "de", // German
+    // "el", // Greek
     "en", // English
-    "es", // Spanish
-    "et", // Estonian
-    "fa", // Persian
-    "fi", // Finnish
-    "fr", // French
-    "ga", // Irish
-    "he", // Hebrew
-    "hi", // Hindi
-    "hr", // Croatian
-    "hu", // Hungarian
-    "id", // Indonesian
-    "it", // Italian
+    // "es", // Spanish
+    // "et", // Estonian
+    // "fa", // Persian
+    // "fi", // Finnish
+    // "fr", // French
+    // "ga", // Irish
+    // "he", // Hebrew
+    // "hi", // Hindi
+    // "hr", // Croatian
+    // "hu", // Hungarian
+    // "id", // Indonesian
+    // "it", // Italian
     "ja", // Japanese
-    "ko", // Korean
-    "lt", // Lithuanian
-    "lv", // Latvian
-    "ne", // Nepali
-    "nl", // Dutch
-    "no", // Norwegian
-    "mr", // Marathi
-    "mt", // Maltese
-    "pl", // Polish
-    "pt", // Portuguese
-    "ro", // Romanian
-    "ru", // Russian
-    "sk", // Slovak
-    "sl", // Slovenian
-    "sv", // Swedish
-    "tr", // Turkish
-    "uk", // Ukrainian
-    "ur", // Urdu
-    "vi", // Vietnamese
-    "zh-Hans", // Chinese (Simplified)
-    "zh-Hant" // Chinese (Traditional)
+    // "ko", // Korean
+    // "lt", // Lithuanian
+    // "lv", // Latvian
+    // "ne", // Nepali
+    // "nl", // Dutch
+    // "no", // Norwegian
+    // "mr", // Marathi
+    // "mt", // Maltese
+    // "pl", // Polish
+    // "pt", // Portuguese
+    // "ro", // Romanian
+    // "ru", // Russian
+    // "sk", // Slovak
+    // "sl", // Slovenian
+    // "sv", // Swedish
+    // "tr", // Turkish
+    // "uk", // Ukrainian
+    // "ur", // Urdu
+    // "vi", // Vietnamese
+    // "zh-Hans", // Chinese (Simplified)
+    // "zh-Hant" // Chinese (Traditional)
   };
 
   private static final Set<String> ALLOWED_LANG_SET =
@@ -138,14 +138,14 @@ public class OsmNames {
     }
 
     // Backfill name:zh to name:zh-Hant and name:zh-Hans if those are not available
-    if (sf.hasTag("name:zh")) {
-      if (!sf.hasTag("name:zh-Hant")) {
-        feature.setAttrWithMinzoom("name:zh-Hant", sf.getTag("name:zh"), minZoom);
-      }
-      if (!sf.hasTag("name:zh-Hans")) {
-        feature.setAttrWithMinzoom("name:zh-Hans", sf.getTag("name:zh"), minZoom);
-      }
-    }
+    // if (sf.hasTag("name:zh")) {
+    //   if (!sf.hasTag("name:zh-Hant")) {
+    //     feature.setAttrWithMinzoom("name:zh-Hant", sf.getTag("name:zh"), minZoom);
+    //   }
+    //   if (!sf.hasTag("name:zh-Hans")) {
+    //     feature.setAttrWithMinzoom("name:zh-Hans", sf.getTag("name:zh"), minZoom);
+    //   }
+    // }
     return feature;
   }
 

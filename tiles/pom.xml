@@ -154,13 +154,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>3.4.2</version>
-        <dependencies>
-          <dependency>
-            <groupId>com.onthegomap.planetiler</groupId>
-            <artifactId>planetiler-core</artifactId>
-            <version>${planetiler.version}</version>
-          </dependency>
-        </dependencies>
 
         <configuration>
           <archive>
@@ -171,9 +164,9 @@
               <mainClass>${mainClass}</mainClass>
             </manifest>
           </archive>
-          <descriptorRefs>
-            <descriptorRef>with-deps</descriptorRef>
-          </descriptorRefs>
+          <descriptors>
+            <descriptor>${project.basedir}/src/assembly/with-deps.xml</descriptor>
+          </descriptors>
         </configuration>
 
         <executions>

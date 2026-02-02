@@ -218,7 +218,12 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
       with("railway"),
       use("kind", "rail"),
       use("kindDetail", fromTag("railway")),
-      use("minZoom", 11)
+      use("minZoom", 7)
+    ),
+    rule(
+      with("railway", "rail"),
+      with("highspeed"),
+      use("minZoom", 4)
     ),
     rule(
       with("railway", "service"),
@@ -272,7 +277,7 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
     rule(
       with("route", "ferry"),
       use("kind", "ferry"),
-      use("minZoom", 11)
+      use("minZoom", 10)
     ),
     rule(
       with("aeroway", "taxiway"),
@@ -459,7 +464,29 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
     // Server sort features so client label collisions are pre-sorted
     feature.setSortKey(minZoom);
 
-    OsmNames.setOsmNames(feature, sf, 12);
+    boolean isMainlineRail = kind.equals("rail") && kindDetail.equals("rail");
+    int minZoomNames = isMainlineRail ? minZoom : 12;
+
+    if (isMainlineRail) {
+      if (sf.hasTag("highspeed")) {
+        feature.setAttrWithMinzoom("highspeed", sf.getTag("highspeed"), minZoom);
+      }
+
+      if (sf.hasTag("operator")) {
+        feature.setAttrWithMinzoom("operator", sf.getTag("operator"), minZoom);
+      }
+
+      for (String key : sf.tags().keySet()) {
+        if (key.startsWith("operator:")) {
+          String lang = key.substring("operator:".length());
+          if (OsmNames.isAllowed("name:" + lang)) {
+            feature.setAttrWithMinzoom(key, sf.getTag(key), minZoom);
+          }
+        }
+      }
+    }
+
+    OsmNames.setOsmNames(feature, sf, minZoomNames);
   }
 
   public void processOsm(SourceFeature sf, FeatureCollector features) {
