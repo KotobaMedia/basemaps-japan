@@ -21,6 +21,7 @@ import com.protomaps.basemap.feature.CountryCoder;
 import com.protomaps.basemap.feature.FeatureId;
 import com.protomaps.basemap.locales.CartographicLocale;
 import com.protomaps.basemap.names.OsmNames;
+import java.text.Normalizer;
 import java.util.*;
 
 @SuppressWarnings("java:S1192")
@@ -473,20 +474,159 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
       }
 
       if (sf.hasTag("operator")) {
-        feature.setAttrWithMinzoom("operator", sf.getTag("operator"), minZoom);
-      }
-
-      for (String key : sf.tags().keySet()) {
-        if (key.startsWith("operator:")) {
-          String lang = key.substring("operator:".length());
-          if (OsmNames.isAllowed("name:" + lang)) {
-            feature.setAttrWithMinzoom(key, sf.getTag(key), minZoom);
+        var normalized = normalizeRailOperator(sf.getString("operator"));
+        if (normalized != null) {
+          feature.setAttrWithMinzoom("operator", normalized.operator(), minZoom);
+          if (normalized.isJr()) {
+            feature.setAttrWithMinzoom("is_jr", true, minZoom);
           }
         }
       }
     }
 
     OsmNames.setOsmNames(feature, sf, minZoomNames);
+  }
+
+  private enum JrOperator {
+    GENERIC("日本旅客鉄道"),
+    EAST("東日本旅客鉄道"),
+    CENTRAL("東海旅客鉄道"),
+    WEST("西日本旅客鉄道"),
+    HOKKAIDO("北海道旅客鉄道"),
+    SHIKOKU("四国旅客鉄道"),
+    KYUSHU("九州旅客鉄道"),
+    FREIGHT("日本貨物鉄道");
+
+    final String canonical;
+
+    JrOperator(String canonical) {
+      this.canonical = canonical;
+    }
+  }
+
+  private record NormalizedOperator(String operator, boolean isJr) {}
+
+  private static NormalizedOperator normalizeRailOperator(String operator) {
+    if (operator == null) {
+      return null;
+    }
+
+    String raw = operator.strip().replace('；', ';');
+    if (raw.isEmpty()) {
+      return null;
+    }
+
+    String[] parts = raw.split(";");
+    boolean isJr = false;
+    List<String> out = new ArrayList<>(parts.length);
+    for (String rawPart : parts) {
+      String part = stripMatchingQuotes(rawPart.strip());
+      if (part.isEmpty()) {
+        continue;
+      }
+      JrOperator jr = getJrOperator(part);
+      if (jr != null) {
+        isJr = true;
+        out.add(jr.canonical);
+      } else {
+        out.add(part);
+      }
+    }
+
+    if (out.isEmpty()) {
+      return null;
+    }
+    return new NormalizedOperator(String.join(";", out), isJr);
+  }
+
+  private static JrOperator getJrOperator(String operator) {
+    String s = normalizeForMatching(operator);
+    if (s.isEmpty()) {
+      return null;
+    }
+    String lower = s.toLowerCase(Locale.ROOT);
+
+    if (containsAny(s, "日本貨物鉄道", "JR貨物", "貨物鉄道")
+      || containsAny(lower, "jr freight", "jrf", "japan freight railway")) {
+      return JrOperator.FREIGHT;
+    }
+    if (containsAny(s, "北海道旅客鉄道") || containsAny(lower, "jr hokkaido")) {
+      return JrOperator.HOKKAIDO;
+    }
+    if (containsAny(s, "四国旅客鉄道") || containsAny(lower, "jr shikoku")) {
+      return JrOperator.SHIKOKU;
+    }
+    if (containsAny(s, "九州旅客鉄道") || containsAny(lower, "jr kyushu")) {
+      return JrOperator.KYUSHU;
+    }
+    if (containsAny(s, "東海旅客鉄道") || containsAny(lower, "jr central", "central japan railway", "jr tokai")) {
+      return JrOperator.CENTRAL;
+    }
+    if (containsAny(s, "東日本旅客鉄道", "東日本旅客鉃道", "東日本旅客鐵道")
+      || containsAny(lower, "jr east", "east japan railway", "east japan railway company")) {
+      return JrOperator.EAST;
+    }
+    if (containsAny(s, "西日本旅客鉄道", "西日本旅客鐵道")
+      || containsAny(lower, "jr west", "west japan railway", "west japan railway company")) {
+      return JrOperator.WEST;
+    }
+
+    boolean jrCandidate = containsAny(lower, "jr", "japan railway", "japan railways")
+      || containsAny(s, "旅客鉄道", "貨物鉄道");
+    if (!jrCandidate) {
+      return null;
+    }
+
+    if (containsAny(s, "貨物") || lower.contains("freight")) {
+      return JrOperator.FREIGHT;
+    }
+    if (s.contains("北海道") || lower.contains("hokkaido")) {
+      return JrOperator.HOKKAIDO;
+    }
+    if (s.contains("四国") || lower.contains("shikoku")) {
+      return JrOperator.SHIKOKU;
+    }
+    if (s.contains("九州") || lower.contains("kyushu")) {
+      return JrOperator.KYUSHU;
+    }
+    if (s.contains("東海") || lower.contains("central") || lower.contains("tokai")) {
+      return JrOperator.CENTRAL;
+    }
+    if (s.contains("東日本") || lower.contains("east japan") || (lower.contains("jr") && lower.contains("east"))) {
+      return JrOperator.EAST;
+    }
+    if (s.contains("西日本") || lower.contains("west japan") || (lower.contains("jr") && lower.contains("west"))) {
+      return JrOperator.WEST;
+    }
+
+    return JrOperator.GENERIC;
+  }
+
+  private static String normalizeForMatching(String input) {
+    String normalized = Normalizer.normalize(input, Normalizer.Form.NFKC).strip();
+    normalized = normalized.replace('\u00A0', ' ');
+    normalized = normalized.replaceAll("\\s+", " ");
+    return normalized;
+  }
+
+  private static String stripMatchingQuotes(String input) {
+    if (input.length() >= 2) {
+      char first = input.charAt(0);
+      char last = input.charAt(input.length() - 1);
+      if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+        return input.substring(1, input.length() - 1).strip();
+      }
+    }
+    return input;
+  }
+
+  private static boolean containsAny(String haystack, String... needles) {
+    for (String needle : needles) {
+      if (!needle.isEmpty() && haystack.contains(needle)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public void processOsm(SourceFeature sf, FeatureCollector features) {

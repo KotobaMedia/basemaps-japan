@@ -1,14 +1,19 @@
 package com.protomaps.basemap.layers;
 
 import static com.onthegomap.planetiler.TestUtils.newLineString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.onthegomap.planetiler.FeatureCollector;
+import com.onthegomap.planetiler.TestUtils;
 import com.onthegomap.planetiler.reader.SimpleFeature;
 import com.onthegomap.planetiler.reader.osm.OsmElement;
 import com.onthegomap.planetiler.reader.osm.OsmReader;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -346,6 +351,73 @@ class RoadsTest extends LayerTest {
         "railway", "disused"
       )
     );
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "'JR West', 西日本旅客鉄道",
+    "'West Japan Railway Company', 西日本旅客鉄道",
+    "'JR 東日本', 東日本旅客鉄道",
+    "'JR東日本　秋田支社', 東日本旅客鉄道",
+    "'JR Central', 東海旅客鉄道",
+    "'JR Kyushu', 九州旅客鉄道",
+    "'JR Hokkaido', 北海道旅客鉄道",
+    "'JR Shikoku', 四国旅客鉄道",
+    "'JR Freight', 日本貨物鉄道",
+  })
+  void testRailwayOperatorNormalization(String operator, String expected) {
+    assertFeatures(12,
+      List.of(Map.of(
+        "kind", "rail",
+        "kind_detail", "rail",
+        "_minzoom", 7,
+        "operator", expected,
+        "is_jr", true
+      )),
+      processWithRelationAndCoords("",
+        0, 0, 1, 1,
+        "railway", "rail",
+        "operator", operator
+      )
+    );
+  }
+
+  @Test
+  void testRailwayOperatorNormalizationWithMultipleOperators() {
+    assertFeatures(12,
+      List.of(Map.of(
+        "kind", "rail",
+        "kind_detail", "rail",
+        "_minzoom", 7,
+        "operator", "あいの風とやま鉄道;西日本旅客鉄道",
+        "is_jr", true
+      )),
+      processWithRelationAndCoords("",
+        0, 0, 1, 1,
+        "railway", "rail",
+        "operator", "あいの風とやま鉄道;JR West"
+      )
+    );
+  }
+
+  @Test
+  void testRailwayOperatorLanguageTagsDropped() {
+    var features = processWithRelationAndCoords("",
+      0, 0, 1, 1,
+      "railway", "rail",
+      "operator", "JR East",
+      "operator:en", "JR East",
+      "operator:ja", "東日本旅客鉄道"
+    );
+
+    var list = StreamSupport.stream(features.spliterator(), false).toList();
+    assertEquals(1, list.size());
+
+    var actual = TestUtils.toMap(list.get(0), 12);
+    assertEquals("東日本旅客鉄道", actual.get("operator"));
+    assertTrue((Boolean) actual.get("is_jr"));
+    assertFalse(actual.containsKey("operator:en"));
+    assertFalse(actual.containsKey("operator:ja"));
   }
 
   @Test
