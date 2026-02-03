@@ -227,6 +227,10 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
       use("minZoom", 4)
     ),
     rule(
+      with("railway", "subway"),
+      use("minZoom", 12)
+    ),
+    rule(
       with("railway", "service"),
       use("minZoom", 13)
     ),
@@ -244,7 +248,6 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
           monorail
           narrow_gauge
           preserved
-          subway
           tram
         """),
       use("minZoom", 14)

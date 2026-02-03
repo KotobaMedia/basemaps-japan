@@ -30,7 +30,7 @@ import java.util.Map;
 public class Pois implements ForwardingProfile.LayerPostProcessor {
 
   private Map<String, int[][]> qrankGrading = Map.of(
-    "station", new int[][]{{10, 50000}, {12, 20000}, {13, 10000}},
+    "station", new int[][]{{9, 50000}, {10, 20000}, {11, 10000}},
     "aerodrome", new int[][]{{10, 50000}, {12, 20000}, {13, 5000}, {14, 2500}},
     "park", new int[][]{{11, 20000}, {12, 10000}, {13, 5000}, {14, 2500}},
     "peak", new int[][]{{11, 20000}, {12, 10000}, {13, 5000}, {14, 2500}},
