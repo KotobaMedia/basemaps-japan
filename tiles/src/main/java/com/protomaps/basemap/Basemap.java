@@ -134,7 +134,7 @@ public class Basemap extends ForwardingProfile {
   @Override
   public String attribution() {
     return """
-      <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap</a>
+      <a href="https://tiles.kmproj.com/attribution">Attribution</a>
       """.trim();
   }
 
