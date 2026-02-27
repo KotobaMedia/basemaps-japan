@@ -2,11 +2,8 @@ package com.protomaps.basemap.layers;
 
 import static com.onthegomap.planetiler.TestUtils.newLineString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.onthegomap.planetiler.FeatureCollector;
-import com.onthegomap.planetiler.TestUtils;
 import com.onthegomap.planetiler.reader.SimpleFeature;
 import com.onthegomap.planetiler.reader.osm.OsmElement;
 import com.onthegomap.planetiler.reader.osm.OsmReader;
@@ -62,6 +59,23 @@ class RoadsTest extends LayerTest {
       null,
       2,
       relationResult.stream().map(info -> new OsmReader.RelationMember<>("role", info)).toList()
+    ));
+  }
+
+  private FeatureCollector processJpksjWith(String... arguments) {
+    Map<String, Object> tags = new HashMap<>();
+    List<String> argumentList = List.of(arguments);
+    if (argumentList.size() % 2 == 0) {
+      for (int i = 0; i < argumentList.size(); i += 2) {
+        tags.put(argumentList.get(i), argumentList.get(i + 1));
+      }
+    }
+    return process(SimpleFeature.create(
+      newLineString(0, 0, 1, 1),
+      tags,
+      "jpksj-railway",
+      "N02-24_RailroadSection",
+      1
     ));
   }
 
@@ -281,10 +295,7 @@ class RoadsTest extends LayerTest {
   @Test
   void testRailway() {
     assertFeatures(12,
-      List.of(Map.of("kind", "rail",
-        "kind_detail", "a",
-        "_minzoom", 7
-      )),
+      List.of(),
       processWithRelationAndCoords("",
         0, 0, 1, 1,
         "railway", "a"
@@ -292,10 +303,7 @@ class RoadsTest extends LayerTest {
     );
 
     assertFeatures(12,
-      List.of(Map.of("kind", "rail",
-        "kind_detail", "service",
-        "_minzoom", 13
-      )),
+      List.of(),
       processWithRelationAndCoords("",
         0, 0, 1, 1,
         "railway", "service"
@@ -303,10 +311,7 @@ class RoadsTest extends LayerTest {
     );
 
     assertFeatures(12,
-      List.of(Map.of("kind", "rail",
-        "kind_detail", "service",
-        "_minzoom", 14
-      )),
+      List.of(),
       processWithRelationAndCoords("",
         0, 0, 1, 1,
         "railway", "service",
@@ -328,10 +333,7 @@ class RoadsTest extends LayerTest {
   })
   void testRailwaysSpecial(String railway) {
     assertFeatures(12,
-      List.of(Map.of("kind", "rail",
-        "kind_detail", railway,
-        "_minzoom", 14
-      )),
+      List.of(),
       processWithRelationAndCoords("",
         0, 0, 1, 1,
         "railway", railway
@@ -342,10 +344,7 @@ class RoadsTest extends LayerTest {
   @Test
   void testRailwayDisused() {
     assertFeatures(12,
-      List.of(Map.of("kind", "rail",
-        "kind_detail", "disused",
-        "_minzoom", 15
-      )),
+      List.of(),
       processWithRelationAndCoords("",
         0, 0, 1, 1,
         "railway", "disused"
@@ -374,10 +373,10 @@ class RoadsTest extends LayerTest {
         "operator", expected,
         "is_jr", true
       )),
-      processWithRelationAndCoords("",
-        0, 0, 1, 1,
-        "railway", "rail",
-        "operator", operator
+      processJpksjWith(
+        "N02_001", "12",
+        "N02_002", "2",
+        "N02_004", operator
       )
     );
   }
@@ -392,16 +391,16 @@ class RoadsTest extends LayerTest {
         "operator", "あいの風とやま鉄道;西日本旅客鉄道",
         "is_jr", true
       )),
-      processWithRelationAndCoords("",
-        0, 0, 1, 1,
-        "railway", "rail",
-        "operator", "あいの風とやま鉄道;JR West"
+      processJpksjWith(
+        "N02_001", "12",
+        "N02_002", "2",
+        "N02_004", "あいの風とやま鉄道;JR West"
       )
     );
   }
 
   @Test
-  void testRailwayOperatorLanguageTagsDropped() {
+  void testRailwayOsmNotEmitted() {
     var features = processWithRelationAndCoords("",
       0, 0, 1, 1,
       "railway", "rail",
@@ -411,13 +410,62 @@ class RoadsTest extends LayerTest {
     );
 
     var list = StreamSupport.stream(features.spliterator(), false).toList();
-    assertEquals(1, list.size());
+    assertEquals(0, list.size());
+  }
 
-    var actual = TestUtils.toMap(list.get(0), 12);
-    assertEquals("東日本旅客鉄道", actual.get("operator"));
-    assertTrue((Boolean) actual.get("is_jr"));
-    assertFalse(actual.containsKey("operator:en"));
-    assertFalse(actual.containsKey("operator:ja"));
+  @Test
+  void testJpksjRailwayShinkansen() {
+    assertFeatures(12,
+      List.of(Map.of(
+        "kind", "rail",
+        "kind_detail", "rail",
+        "_minzoom", 4,
+        "highspeed", "yes",
+        "operator", "東海旅客鉄道",
+        "is_jr", true,
+        "name", "東海道新幹線"
+      )),
+      processJpksjWith(
+        "N02_001", "11",
+        "N02_002", "1",
+        "N02_003", "東海道新幹線",
+        "N02_004", "JR Central"
+      )
+    );
+  }
+
+  @Test
+  void testJpksjRailwayMonorail() {
+    assertFeatures(14,
+      List.of(Map.of(
+        "kind", "rail",
+        "kind_detail", "monorail",
+        "_minzoom", 14,
+        "name", "東京モノレール"
+      )),
+      processJpksjWith(
+        "N02_001", "23",
+        "N02_002", "4",
+        "N02_003", "東京モノレール",
+        "N02_004", "東京モノレール株式会社"
+      )
+    );
+  }
+
+  @Test
+  void testJpksjRailwayAtZoom15() {
+    assertFeatures(15,
+      List.of(Map.of(
+        "kind", "rail",
+        "kind_detail", "rail",
+        "_minzoom", 7
+      )),
+      processJpksjWith(
+        "N02_001", "12",
+        "N02_002", "4",
+        "N02_003", "中央線"
+      )
+    );
   }
 
   @Test
@@ -529,7 +577,7 @@ class RoadsTest extends LayerTest {
   })
   void testRailwayService(String service) {
     assertFeatures(13,
-      List.of(Map.of("_minzoom", 13)),
+      List.of(),
       processWithRelationAndCoords("",
         0, 0, 1, 1,
         "railway", "a",

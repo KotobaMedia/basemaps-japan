@@ -422,6 +422,10 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
     if (sf.hasTag("railway", "abandoned", "razed", "demolished", "removed", "construction", "platform", "proposed")) {
       return;
     }
+    if (sf.hasTag("railway")) {
+      // JP KSJ source provides railway geometry; do not emit OSM rail.
+      return;
+    }
 
     var matches = indexNonHighways.getMatches(sf);
     if (matches.isEmpty()) {
@@ -431,7 +435,6 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
     int minZoom = getInteger(sf, matches, "minZoom", 11);
     String kind = getString(sf, matches, "kind", "other");
     String kindDetail = getString(sf, matches, "kindDetail", "");
-
 
     var feature = features.line(this.name())
       .setId(FeatureId.create(sf))
@@ -468,26 +471,7 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
     // Server sort features so client label collisions are pre-sorted
     feature.setSortKey(minZoom);
 
-    boolean isMainlineRail = kind.equals("rail") && kindDetail.equals("rail");
-    int minZoomNames = isMainlineRail ? minZoom : 12;
-
-    if (isMainlineRail) {
-      if (sf.hasTag("highspeed")) {
-        feature.setAttrWithMinzoom("highspeed", sf.getTag("highspeed"), minZoom);
-      }
-
-      if (sf.hasTag("operator")) {
-        var normalized = normalizeRailOperator(sf.getString("operator"));
-        if (normalized != null) {
-          feature.setAttrWithMinzoom("operator", normalized.operator(), minZoom);
-          if (normalized.isJr()) {
-            feature.setAttrWithMinzoom("is_jr", true, minZoom);
-          }
-        }
-      }
-    }
-
-    OsmNames.setOsmNames(feature, sf, minZoomNames);
+    OsmNames.setOsmNames(feature, sf, 12);
   }
 
   private enum JrOperator {
@@ -630,6 +614,106 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
       }
     }
     return false;
+  }
+
+  public void processJpksjRailway(SourceFeature sf, FeatureCollector features) {
+    if (!sf.canBeLine()) {
+      return;
+    }
+
+    Integer railwayClass = parseIntegerTag(sf, "N02_001");
+    Integer institutionType = parseIntegerTag(sf, "N02_002");
+
+    String kindDetail = mapJpksjRailwayKindDetail(railwayClass);
+    boolean highspeed = institutionType != null && institutionType == 1 || railwayClass != null && railwayClass == 25;
+    int minZoom = minZoomForJpksjRailway(kindDetail, highspeed);
+
+    var feature = features.line(this.name())
+      .setId(FeatureId.create(sf))
+      .setAttr("kind", "rail")
+      .setAttr("kind_detail", kindDetail)
+      .setAttr("min_zoom", minZoom + 1)
+      .setAttr("sort_rank", 400)
+      .setMinPixelSize(0)
+      .setPixelTolerance(0)
+      .setMinZoom(minZoom);
+
+    boolean isJr = institutionType != null && (institutionType == 1 || institutionType == 2) ||
+      railwayClass != null && railwayClass == 11;
+
+    if (highspeed) {
+      feature.setAttrWithMinzoom("highspeed", "yes", minZoom);
+    }
+
+    String operator = sf.getString("N02_004");
+    if (operator != null && !operator.isBlank()) {
+      var normalized = normalizeRailOperator(operator);
+      if (normalized != null) {
+        feature.setAttrWithMinzoom("operator", normalized.operator(), minZoom);
+        isJr = isJr || normalized.isJr();
+      }
+    }
+
+    if (isJr) {
+      feature.setAttrWithMinzoom("is_jr", true, minZoom);
+    }
+
+    String routeName = sf.getString("N02_003");
+    if (routeName != null && !routeName.isBlank()) {
+      int minZoomNames = kindDetail.equals("rail") ? minZoom : 12;
+      feature.setAttrWithMinzoom("name", routeName, minZoomNames);
+    }
+
+    feature.setSortKey(minZoom);
+  }
+
+  private static Integer parseIntegerTag(SourceFeature sf, String tagName) {
+    Object value = sf.getTag(tagName);
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof Number number) {
+      return number.intValue();
+    }
+
+    String string = value.toString().strip();
+    if (string.isEmpty()) {
+      return null;
+    }
+
+    int decimal = string.indexOf('.');
+    if (decimal >= 0) {
+      string = string.substring(0, decimal);
+    }
+
+    try {
+      return Integer.parseInt(string);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  private static String mapJpksjRailwayKindDetail(Integer railwayClass) {
+    if (railwayClass == null) {
+      return "rail";
+    }
+    return switch (railwayClass) {
+      case 13 -> "funicular";
+      case 14, 15, 22, 23 -> "monorail";
+      case 16, 24 -> "light_rail";
+      case 17, 21 -> "tram";
+      default -> "rail";
+    };
+  }
+
+  private static int minZoomForJpksjRailway(String kindDetail, boolean highspeed) {
+    if (highspeed) {
+      return 4;
+    }
+    return switch (kindDetail) {
+      case "funicular", "light_rail", "monorail", "tram" -> 14;
+      default -> 7;
+    };
   }
 
   public void processOsm(SourceFeature sf, FeatureCollector features) {

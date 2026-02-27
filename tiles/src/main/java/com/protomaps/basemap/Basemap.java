@@ -19,11 +19,14 @@ import com.protomaps.basemap.layers.Water;
 import com.protomaps.basemap.postprocess.Clip;
 import com.protomaps.basemap.text.FontRegistry;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +80,7 @@ public class Basemap extends ForwardingProfile {
       var roads = new Roads(countryCoder);
       registerHandler(roads);
       registerSourceHandler("osm", roads::processOsm);
+      registerSourceHandler("jpksj-railway", roads::processJpksjRailway);
     }
 
     if (layer.isEmpty() || layer.equals(Transit.LAYER_NAME)) {
@@ -206,6 +210,14 @@ public class Basemap extends ForwardingProfile {
 
     Path nePath = sourcesDir.resolve("natural_earth_vector.sqlite.zip");
     String neUrl = "https://naciscdn.org/naturalearth/packages/natural_earth_vector.sqlite.zip";
+    Path jpksjRailwayZipPath = sourcesDir.resolve("N02-24_GML.zip");
+    Path jpksjRailwayGeoJsonPath = args.file("jpksj-railway_path",
+      "Path to the JP KSJ railway GeoJSON file.", sourcesDir.resolve("N02-24_RailroadSection.geojson"));
+    String jpksjRailwayZipEntry = args.getString("jpksj_railway_zip_entry",
+      "Path inside JP KSJ railway zip archive.", "UTF-8/N02-24_RailroadSection.geojson");
+    String jpksjRailwayZipUrl = args.getString("jpksj_railway_zip_url",
+      "URL to JP KSJ railway zip archive.",
+      "https://nlftp.mlit.go.jp/ksj/gml/data/N02/N02-24/N02-24_GML.zip");
 
     var countryCoder = CountryCoder.fromJarResource();
 
@@ -219,14 +231,17 @@ public class Basemap extends ForwardingProfile {
       .addShapefileSource("osm_land", sourcesDir.resolve("land-polygons-split-3857.zip"),
         "https://osmdata.openstreetmap.de/download/land-polygons-split-3857.zip")
       .addGeoPackageSource("landcover", sourcesDir.resolve("daylight-landcover.gpkg"),
-        "https://r2-public.protomaps.com/datasets/daylight-landcover.gpkg");
+        "https://r2-public.protomaps.com/datasets/daylight-landcover.gpkg")
+      .addGeoJsonSource("jpksj-railway", jpksjRailwayGeoJsonPath);
 
     Path pgfEncodingZip = sourcesDir.resolve("pgf-encoding.zip");
     Path qrankCsv = sourcesDir.resolve("qrank.csv.gz");
     Downloader.create(planetiler.config()).add("ne", neUrl, nePath)
       .add("pgf-encoding", "https://wipfli.github.io/pgf-encoding/pgf-encoding.zip", pgfEncodingZip)
       .add("qrank", "https://qrank.toolforge.org/download/qrank.csv.gz", qrankCsv)
+      .add("jpksj-railway", jpksjRailwayZipUrl, jpksjRailwayZipPath)
       .run();
+    extractZipEntry(jpksjRailwayZipPath, jpksjRailwayZipEntry, jpksjRailwayGeoJsonPath);
     var qrankDb = QrankDb.fromCsv(qrankCsv);
 
     FontRegistry fontRegistry = FontRegistry.getInstance();
@@ -266,5 +281,27 @@ public class Basemap extends ForwardingProfile {
     planetiler.setProfile(new Basemap(qrankDb, countryCoder, clip, layer))
       .setOutput(Path.of(area + ".pmtiles"))
       .run();
+  }
+
+  private static void extractZipEntry(Path zipPath, String entryName, Path destination) throws IOException {
+    if (Files.exists(destination) &&
+      Files.getLastModifiedTime(destination).compareTo(Files.getLastModifiedTime(zipPath)) >= 0) {
+      return;
+    }
+
+    try (ZipFile zip = new ZipFile(zipPath.toFile())) {
+      var entry = zip.getEntry(entryName);
+      if (entry == null) {
+        throw new IOException("Zip entry not found: " + entryName + " in " + zipPath);
+      }
+
+      var parent = destination.getParent();
+      if (parent != null) {
+        Files.createDirectories(parent);
+      }
+      try (var input = zip.getInputStream(entry)) {
+        Files.copy(input, destination, StandardCopyOption.REPLACE_EXISTING);
+      }
+    }
   }
 }
