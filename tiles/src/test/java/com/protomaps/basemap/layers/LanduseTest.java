@@ -256,6 +256,42 @@ class LanduseTest extends LayerTest {
   }
 
   @Test
+  void keepsOnlySelectedKindsInNorthernTerritories() {
+    assertFeatures(15,
+      List.of(Map.of("kind", "wood")),
+      process(SimpleFeature.create(
+        newPolygon(146.1, 44.2, 146.1, 44.25, 146.2, 44.25, 146.1, 44.2),
+        new HashMap<>(Map.of("natural", "wood")),
+        "osm",
+        null,
+        0
+      )));
+
+    assertFeatures(15,
+      List.of(),
+      process(SimpleFeature.create(
+        newPolygon(146.1, 44.2, 146.1, 44.25, 146.2, 44.25, 146.1, 44.2),
+        new HashMap<>(Map.of("leisure", "park")),
+        "osm",
+        null,
+        0
+      )));
+  }
+
+  @Test
+  void removesLanduseInTakeshimaAndSenkaku() {
+    assertFeatures(15,
+      List.of(),
+      process(SimpleFeature.create(
+        newPolygon(131.85, 37.23, 131.85, 37.24, 131.86, 37.24, 131.85, 37.23),
+        new HashMap<>(Map.of("natural", "wood")),
+        "osm",
+        null,
+        0
+      )));
+  }
+
+  @Test
   void testFromTagHighway() {
     assertFeatures(15,
       List.of(Map.of("kind", "pedestrian")),

@@ -2,7 +2,6 @@ package com.protomaps.basemap.names;
 
 import com.onthegomap.planetiler.FeatureCollector;
 import com.onthegomap.planetiler.reader.SourceFeature;
-import com.protomaps.basemap.text.FontRegistry;
 import com.protomaps.basemap.text.TextEngine;
 import java.util.Map;
 
@@ -12,8 +11,6 @@ public class NeNames {
 
   public static FeatureCollector.Feature setNeNames(FeatureCollector.Feature feature, SourceFeature sf,
     int minZoom) {
-    FontRegistry fontRegistry = FontRegistry.getInstance();
-
     for (Map.Entry<String, Object> tag : sf.tags().entrySet()) {
       String key = tag.getKey();
       if (sf.getTag(key) == null) {
@@ -37,13 +34,8 @@ public class NeNames {
         feature.setAttrWithMinzoom("pgf:name", encodedValue, minZoom);
       }
 
-      if (key.startsWith("name:")) {
+      if (key.startsWith("name:") && OsmNames.isAllowed(key)) {
         feature.setAttrWithMinzoom(key, value, minZoom);
-
-        if (fontRegistry.getScripts().contains(script)) {
-          String encodedValue = TextEngine.encodeRegisteredScripts(value);
-          feature.setAttrWithMinzoom("pgf:" + key, encodedValue, minZoom);
-        }
       }
     }
 

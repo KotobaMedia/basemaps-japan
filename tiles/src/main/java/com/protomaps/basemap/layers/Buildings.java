@@ -9,6 +9,7 @@ import com.onthegomap.planetiler.VectorTile;
 import com.onthegomap.planetiler.geo.GeometryException;
 import com.onthegomap.planetiler.reader.SourceFeature;
 import com.onthegomap.planetiler.util.Parse;
+import com.protomaps.basemap.feature.DisputedAreas;
 import com.protomaps.basemap.feature.FeatureId;
 import com.protomaps.basemap.postprocess.Area;
 import java.util.ArrayList;
@@ -89,6 +90,10 @@ public class Buildings implements ForwardingProfile.LayerPostProcessor {
   }
 
   public void processOsm(SourceFeature sf, FeatureCollector features) {
+    if (DisputedAreas.membership(sf).inAnyDisputedRegion()) {
+      return;
+    }
+
     if (sf.canBePolygon() && ((sf.hasTag("building") && !sf.hasTag("building", "no")) ||
       (sf.hasTag("building:part") && !sf.hasTag("building:part", "no")))) {
 

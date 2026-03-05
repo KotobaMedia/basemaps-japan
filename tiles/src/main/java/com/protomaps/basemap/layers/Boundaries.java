@@ -9,6 +9,7 @@ import com.onthegomap.planetiler.reader.osm.OsmElement;
 import com.onthegomap.planetiler.reader.osm.OsmReader;
 import com.onthegomap.planetiler.reader.osm.OsmRelationInfo;
 import com.onthegomap.planetiler.util.Parse;
+import com.protomaps.basemap.feature.DisputedAreas;
 import com.protomaps.basemap.feature.FeatureId;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,20 +28,26 @@ public class Boundaries implements ForwardingProfile.OsmRelationPreprocessor,
 
   public void processNe(SourceFeature sf, FeatureCollector features) {
     String sourceLayer = sf.getSourceLayer();
+    if (!(sourceLayer.equals("ne_10m_admin_0_boundary_lines_land") ||
+      sourceLayer.equals("ne_10m_admin_0_boundary_lines_map_units") ||
+      sourceLayer.equals("ne_10m_admin_0_boundary_lines_disputed_areas") ||
+      sourceLayer.equals("ne_10m_admin_1_states_provinces_lines"))) {
+      return;
+    }
+
+    if (DisputedAreas.membership(sf).inAnyDisputedRegion()) {
+      return;
+    }
+
     String kind = "";
     int adminLevel = 2;
     boolean disputed = false;
     int themeMinZoom = 0;
     int themeMaxZoom = 0;
 
-    if (sourceLayer.equals("ne_10m_admin_0_boundary_lines_land") ||
-      sourceLayer.equals("ne_10m_admin_0_boundary_lines_map_units") ||
-      sourceLayer.equals("ne_10m_admin_0_boundary_lines_disputed_areas") ||
-      sourceLayer.equals("ne_10m_admin_1_states_provinces_lines")) {
-      themeMinZoom = 4;
-      themeMaxZoom = 5;
-      kind = "tz_boundary";
-    }
+    themeMinZoom = 4;
+    themeMaxZoom = 5;
+    kind = "tz_boundary";
 
     if (!kind.isEmpty()) {
       switch (sf.getString("featurecla")) {
@@ -153,6 +160,9 @@ public class Boundaries implements ForwardingProfile.OsmRelationPreprocessor,
       // Beware coastlines and coastal waters (eg with admin borders in large estuaries)
       // like mouth of Columbia River between Oregon and Washington in USA
       if (sf.hasTag("natural", "coastline") || sf.hasTag("maritime", "yes")) {
+        return;
+      }
+      if (DisputedAreas.membership(sf).inAnyDisputedRegion()) {
         return;
       }
       List<OsmReader.RelationMember<AdminRecord>> recs = sf.relationInfo(AdminRecord.class);

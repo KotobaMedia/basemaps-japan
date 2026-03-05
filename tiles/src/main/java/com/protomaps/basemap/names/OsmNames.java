@@ -2,7 +2,6 @@ package com.protomaps.basemap.names;
 
 import com.onthegomap.planetiler.FeatureCollector;
 import com.onthegomap.planetiler.reader.SourceFeature;
-import com.protomaps.basemap.text.FontRegistry;
 import com.protomaps.basemap.text.TextEngine;
 import java.text.NumberFormat;
 import java.text.ParsePosition;
@@ -69,7 +68,6 @@ public class OsmNames {
 
   public static FeatureCollector.Feature setOsmNames(FeatureCollector.Feature feature, SourceFeature sf,
     int minZoom) {
-    FontRegistry fontRegistry = FontRegistry.getInstance();
     for (Map.Entry<String, Object> tag : sf.tags().entrySet()) {
       var key = tag.getKey();
       String value = sf.getTag(key).toString();
@@ -94,45 +92,26 @@ public class OsmNames {
         }
         if (segments.size() >= 2) {
           int index = 1;
-          feature.setAttrWithMinzoom("name2", segments.get(index), minZoom);
+          var name2 = segments.get(index);
+          script = Script.getScript(name2);
 
-          script = Script.getScript(segments.get(index));
-
-          if (!script.equals("Latin") && !script.equals("Generic")) {
-            feature.setAttrWithMinzoom("script2", script, minZoom);
+          // Keep encoded text for scripts we support, but hide Cyrillic name2/script2.
+          if (!script.equals("Cyrillic")) {
+            feature.setAttrWithMinzoom("name2", name2, minZoom);
+            if (!script.equals("Latin") && !script.equals("Generic")) {
+              feature.setAttrWithMinzoom("script2", script, minZoom);
+            }
           }
 
-          String encodedValue = TextEngine.encodeRegisteredScripts(segments.get(index));
-          if (!encodedValue.equals(segments.get(index))) {
+          String encodedValue = TextEngine.encodeRegisteredScripts(name2);
+          if (!encodedValue.equals(name2)) {
             feature.setAttrWithMinzoom("pgf:name2", encodedValue, minZoom);
-          }
-        }
-        if (segments.size() >= 3) {
-          int index = 2;
-          feature.setAttrWithMinzoom("name3", segments.get(index), minZoom);
-
-          script = Script.getScript(segments.get(index));
-
-          if (!script.equals("Latin") && !script.equals("Generic")) {
-            feature.setAttrWithMinzoom("script3", script, minZoom);
-          }
-
-          String encodedValue = TextEngine.encodeRegisteredScripts(segments.get(index));
-          if (!encodedValue.equals(segments.get(index))) {
-            feature.setAttrWithMinzoom("pgf:name3", encodedValue, minZoom);
           }
         }
       }
 
       if (isAllowed(key)) {
         feature.setAttrWithMinzoom(key, value, minZoom);
-
-        if (fontRegistry.getScripts().contains(script)) {
-          String encodedValue = TextEngine.encodeRegisteredScripts(value);
-          if (!encodedValue.equals(value)) {
-            feature.setAttrWithMinzoom("pgf:" + key, encodedValue, minZoom);
-          }
-        }
       }
 
     }

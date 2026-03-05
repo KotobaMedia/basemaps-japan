@@ -202,6 +202,19 @@ class PlacesTest extends LayerTest {
         0
       )));
   }
+
+  @Test
+  void dropsPlacesInDisputedAreas() {
+    assertFeatures(12,
+      List.of(),
+      process(SimpleFeature.create(
+        newPoint(131.86, 37.24),
+        new HashMap<>(Map.of("place", "town", "name", "Example")),
+        "osm",
+        null,
+        0
+      )));
+  }
 }
 
 

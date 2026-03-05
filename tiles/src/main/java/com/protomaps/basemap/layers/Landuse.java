@@ -14,6 +14,7 @@ import com.onthegomap.planetiler.VectorTile;
 import com.onthegomap.planetiler.expression.MultiExpression;
 import com.onthegomap.planetiler.geo.GeometryException;
 import com.onthegomap.planetiler.reader.SourceFeature;
+import com.protomaps.basemap.feature.DisputedAreas;
 import com.protomaps.basemap.feature.FeatureId;
 import com.protomaps.basemap.postprocess.Area;
 import java.util.List;
@@ -242,6 +243,14 @@ public class Landuse implements ForwardingProfile.LayerPostProcessor {
       }
 
       String kind = getString(sf, matches, "kind", "other");
+
+      var membership = DisputedAreas.membership(sf);
+      if (membership.inTakeshimaOrSenkaku()) {
+        return;
+      }
+      if (membership.northernTerritories() && !DisputedAreas.isAllowedLanduseInNorthernTerritories(kind)) {
+        return;
+      }
 
       features.polygon(this.name())
         .setId(FeatureId.create(sf))

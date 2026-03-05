@@ -20,6 +20,7 @@ import com.onthegomap.planetiler.geo.GeoUtils;
 import com.onthegomap.planetiler.geo.GeometryException;
 import com.onthegomap.planetiler.reader.SourceFeature;
 import com.onthegomap.planetiler.util.Parse;
+import com.protomaps.basemap.feature.DisputedAreas;
 import com.protomaps.basemap.feature.FeatureId;
 import com.protomaps.basemap.names.OsmNames;
 import java.util.List;
@@ -347,6 +348,13 @@ public class Water implements ForwardingProfile.LayerPostProcessor {
 
     String kindDetail = getString(sf, matches, "kindDetail", null);
     boolean keepPolygon = getBoolean(sf, matches, "keepPolygon", true);
+    var membership = DisputedAreas.membership(sf);
+    boolean inAnyDisputedRegion = membership.inAnyDisputedRegion();
+
+    // In Takeshima we drop all reef features regardless of geometry type.
+    if (membership.takeshima() && "reef".equals(kind)) {
+      return;
+    }
 
     int extraAttrMinzoom = 14;
 
@@ -380,11 +388,13 @@ public class Water implements ForwardingProfile.LayerPostProcessor {
         .setPixelTolerance(0)
         .setMinZoom(minZoom);
 
-      OsmNames.setOsmNames(feat, sf, 0);
+      if (!inAnyDisputedRegion) {
+        OsmNames.setOsmNames(feat, sf, 0);
+      }
     }
 
     // points
-    if (sf.isPoint()) {
+    if (sf.isPoint() && !inAnyDisputedRegion) {
       int minZoom = getInteger(sf, matches, "minZoom", 15);
       var feat = features.point(LAYER_NAME)
         .setId(FeatureId.create(sf))
@@ -397,7 +407,7 @@ public class Water implements ForwardingProfile.LayerPostProcessor {
     }
 
     // points from polygons
-    if (sf.hasTag("name") && sf.canBePolygon()) {
+    if (sf.hasTag("name") && sf.canBePolygon() && !inAnyDisputedRegion) {
       int nameMinZoom = 15;
       Double wayArea = 0.0;
 

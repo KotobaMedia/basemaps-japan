@@ -6,6 +6,7 @@ import com.onthegomap.planetiler.ForwardingProfile;
 import com.onthegomap.planetiler.VectorTile;
 import com.onthegomap.planetiler.geo.GeometryException;
 import com.onthegomap.planetiler.reader.SourceFeature;
+import com.protomaps.basemap.feature.DisputedAreas;
 import com.protomaps.basemap.feature.FeatureId;
 import com.protomaps.basemap.names.OsmNames;
 import java.util.List;
@@ -53,6 +54,8 @@ public class Earth implements ForwardingProfile.LayerPostProcessor {
   }
 
   public void processOsm(SourceFeature sf, FeatureCollector features) {
+    var membership = DisputedAreas.membership(sf);
+
     if (sf.canBeLine() && !sf.canBePolygon() && sf.hasTag("natural", "cliff")) {
       int minZoom = 12;
       var feat = features.line(LAYER_NAME)
@@ -62,10 +65,15 @@ public class Earth implements ForwardingProfile.LayerPostProcessor {
         .setPixelTolerance(PIXEL_TOLERANCE)
         .setMinZoom(minZoom);
 
-      OsmNames.setOsmNames(feat, sf, 0);
+      if (!membership.inTakeshimaOrSenkaku()) {
+        OsmNames.setOsmNames(feat, sf, 0);
+      }
     }
 
     if (sf.canBePolygon() && sf.hasTag("place", "island")) {
+      if (membership.inAnyDisputedRegion()) {
+        return;
+      }
       var feat = features.innermostPoint(LAYER_NAME)
         .setId(FeatureId.create(sf))
         .setAttr("kind", "island")

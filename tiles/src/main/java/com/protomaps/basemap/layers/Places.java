@@ -18,6 +18,7 @@ import com.onthegomap.planetiler.reader.SourceFeature;
 import com.onthegomap.planetiler.util.SortKey;
 import com.onthegomap.planetiler.util.ZoomFunction;
 import com.protomaps.basemap.feature.CountryCoder;
+import com.protomaps.basemap.feature.DisputedAreas;
 import com.protomaps.basemap.feature.FeatureId;
 import com.protomaps.basemap.feature.Matcher;
 import com.protomaps.basemap.names.OsmNames;
@@ -228,6 +229,9 @@ public class Places implements ForwardingProfile.LayerPostProcessor {
 
   public void processOsm(SourceFeature sf, FeatureCollector features) {
     if (!sf.isPoint() || !sf.hasTag("name") || !sf.hasTag("place")) {
+      return;
+    }
+    if (DisputedAreas.membership(sf).inAnyDisputedRegion()) {
       return;
     }
 

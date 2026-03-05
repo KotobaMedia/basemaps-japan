@@ -1,11 +1,14 @@
 package com.protomaps.basemap.layers;
 
 import static com.onthegomap.planetiler.TestUtils.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.onthegomap.planetiler.reader.SimpleFeature;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 
 class WaterTest extends LayerTest {
@@ -91,6 +94,36 @@ class WaterTest extends LayerTest {
         null,
         0
       )));
+  }
+
+  @Test
+  void dropsWaterPointsInDisputedAreas() {
+    assertFeatures(12,
+      List.of(),
+      process(SimpleFeature.create(
+        newPoint(131.86, 37.24),
+        new HashMap<>(Map.of("place", "ocean", "name", "Example Ocean")),
+        "osm",
+        null,
+        0
+      )));
+  }
+
+  @Test
+  void stripsWaterNamesInDisputedAreas() {
+    var processed = process(SimpleFeature.create(
+      newLineString(131.84, 37.23, 131.89, 37.25),
+      new HashMap<>(Map.of("waterway", "river", "name", "Example River")),
+      "osm",
+      null,
+      0
+    ));
+
+    var featureList = StreamSupport.stream(processed.spliterator(), false).toList();
+    assertEquals(1, featureList.size());
+    var outputTags = toMap(featureList.getFirst(), 9);
+    assertEquals("river", outputTags.get("kind"));
+    assertFalse(outputTags.containsKey("name"));
   }
 }
 

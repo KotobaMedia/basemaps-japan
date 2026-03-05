@@ -19,6 +19,7 @@ import com.onthegomap.planetiler.expression.MultiExpression;
 import com.onthegomap.planetiler.geo.GeoUtils;
 import com.onthegomap.planetiler.geo.GeometryException;
 import com.onthegomap.planetiler.reader.SourceFeature;
+import com.protomaps.basemap.feature.DisputedAreas;
 import com.protomaps.basemap.feature.FeatureId;
 import com.protomaps.basemap.feature.Matcher;
 import com.protomaps.basemap.feature.QrankDb;
@@ -425,6 +426,10 @@ public class Pois implements ForwardingProfile.LayerPostProcessor {
   }
 
   public void processOsm(SourceFeature sf, FeatureCollector features) {
+    if (DisputedAreas.membership(sf).inAnyDisputedRegion()) {
+      return;
+    }
+
     boolean hasNamedPolygon = isNamedPolygon(sf);
 
     // We only do POI display for points and named polygons

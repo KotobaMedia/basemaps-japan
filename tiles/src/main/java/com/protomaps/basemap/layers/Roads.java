@@ -19,6 +19,7 @@ import com.onthegomap.planetiler.reader.SourceFeature;
 import com.onthegomap.planetiler.reader.osm.OsmElement;
 import com.onthegomap.planetiler.reader.osm.OsmRelationInfo;
 import com.protomaps.basemap.feature.CountryCoder;
+import com.protomaps.basemap.feature.DisputedAreas;
 import com.protomaps.basemap.feature.FeatureId;
 import com.protomaps.basemap.feature.Matcher;
 import com.protomaps.basemap.geometry.Linear;
@@ -731,6 +732,9 @@ public class Roads implements ForwardingProfile.LayerPostProcessor, ForwardingPr
 
   public void processOsm(SourceFeature sf, FeatureCollector features) {
     if (!sf.canBeLine()) {
+      return;
+    }
+    if (DisputedAreas.membership(sf).inAnyDisputedRegion()) {
       return;
     }
 
