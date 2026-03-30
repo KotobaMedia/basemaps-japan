@@ -62,6 +62,19 @@ class PlacesTest extends LayerTest {
   }
 
   @Test
+  void testJapanCountryStopsBeforeZoom3() {
+    assertFeatures(12,
+      List.of(Map.of("_minzoom", 1, "_maxzoom", 2, "kind", "country")),
+      process(SimpleFeature.create(
+        newPoint(138.2529, 36.2048),
+        new HashMap<>(Map.of("place", "country", "wikidata", "Q17", "name", "日本")),
+        "osm",
+        null,
+        0
+      )));
+  }
+
+  @Test
   void testMinMaxLabelRegion() {
     assertFeatures(12,
       List.of(Map.of("_minzoom", 3, "_maxzoom", 7, "kind", "region")),
@@ -88,6 +101,28 @@ class PlacesTest extends LayerTest {
   }
 
   @Test
+  void testTokyoHasLowZoomWikidataOverride() {
+    assertFeatures(12,
+      List.of(Map.of("_minzoom", 1,
+        "kind", "locality",
+        "kind_detail", "city",
+        "min_zoom", 2,
+        "population_rank", 14)),
+      process(SimpleFeature.create(
+        newPoint(139.6917, 35.6895),
+        new HashMap<>(Map.of(
+          "place", "city",
+          "wikidata", "Q1490",
+          "name", "東京都",
+          "population", "13613660"
+        )),
+        "osm",
+        null,
+        0
+      )));
+  }
+
+  @Test
   void testMinMaxLabelPopulatedPlace() {
     assertFeatures(12,
       List.of(Map.of("_minzoom", 4, "kind", "locality", "population_rank", 12)),
@@ -107,6 +142,50 @@ class PlacesTest extends LayerTest {
       process(SimpleFeature.create(
         newPoint(1, 1),
         new HashMap<>(Map.of("place", "city", "wikidata", "Q999", "name", "XX")),
+        "osm",
+        null,
+        0
+      )));
+  }
+
+  @Test
+  void testFukuokaWithWikidataVisibleAtZoom4() {
+    assertFeatures(4,
+      List.of(Map.of("kind", "locality",
+        "kind_detail", "city",
+        "min_zoom", 5,
+        "population", 1612392,
+        "population_rank", 12)),
+      process(SimpleFeature.create(
+        newPoint(130.4017, 33.5902),
+        new HashMap<>(Map.of(
+          "place", "city",
+          "name", "福岡市",
+          "population", "1612392",
+          "wikidata", "Q26600"
+        )),
+        "osm",
+        null,
+        0
+      )));
+  }
+
+  @Test
+  void testNagasakiNoLongerVisibleAtZoom4() {
+    assertFeatures(12,
+      List.of(Map.of("_minzoom", 5,
+        "kind", "locality",
+        "kind_detail", "city",
+        "min_zoom", 6,
+        "population_rank", 10)),
+      process(SimpleFeature.create(
+        newPoint(129.8777, 32.7503),
+        new HashMap<>(Map.of(
+          "place", "city",
+          "name", "長崎市",
+          "population", "409118",
+          "wikidata", "Q38234"
+        )),
         "osm",
         null,
         0
